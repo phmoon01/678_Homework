@@ -78,7 +78,7 @@ for(i in 1:100){
 
 data = data.frame(x = x, y = y)
 stanGlm <- stan_glm(y ~ x, data = data, refresh = 0)
-stanGlm
+summary(stanGlm)
 ```
 
 ### 7.3b
@@ -115,13 +115,13 @@ x0 <- hibbs[hibbs$x == 1,]$vote
 x1 <- hibbs[hibbs$x == 0,]$vote
 
 avgDiff <- mean(x0) - mean(x1)
-avgDiff
+cat("The difference in incumbent party's vote share on average:", avgDiff)
 
 c0 <- length(x0)
 c1 <- length(x1)
 StdDev <- (sqrt((var(x0) * (c0 - 1) + var(x1) * (c1 - 1)) / (c0 + c1 - 2)))
 StdErr <- StdDev * sqrt(1 / c0 + 1 / c1)
-StdErr
+cat("\nThe standard error for this difference:                   ", StdErr)
 ```
 
 ### 7.6b
@@ -150,7 +150,7 @@ plot(x, y, pch = 20, main = "Simulation Data")
 lm_model <- lm(y ~ x , data = data)
 stanGlm <- stan_glm(y ~ x, data = data, refresh = 0)
 lm_model
-stanGlm
+summary(stanGlm)
 ```
 
 ### 8.8b
@@ -436,16 +436,14 @@ ggplot() +
 Make a histogram of the difference between the course evaluations for A and B. What is the probability that A will have a higher evaluation? 
 
 ```{r}
+#Histogram shown in Problem 10.7a
+
 pA <- c(apply(SA, 2, mean), apply(SA, 2, sd))
 pB <- c(apply(SB, 2, mean), apply(SB, 2, sd))
 
 pC <- c(pA[1] - pB[1], sqrt(pA[2] ^ 2 + pB[2] ^ 2))
-1 - pnorm(0, pC[1], pC[2])
-
-a <- sample(SA, 10000, replace = TRUE)
-b <- sample(SB, 10000, replace = TRUE)
-
-mean(a > b)
+pD <- 1 - pnorm(0, pC[1], pC[2])
+cat("The probability that A will have a higher evaluation is", pD)
 ```
 
 ## 10.8 How many simulation draws: 
@@ -455,25 +453,43 @@ Take the model from Exercise 10.6 that predicts course evaluations from beauty a
 Display and discuss the fitted model. Focus on the estimate and standard error for the coefficient of beauty. 
 
 ```{r}
+#This is from Problem 10.6b
+stanGlm1 <- stan_glm(eval ~ beauty + female + beauty:female, data = beauty, refresh = 0)
+stanGlm1
 ```
 
 ### 10.8b
 Compute the median and mad sd of the posterior simulations of the coefficient of beauty, and check that these are the same as the output from printing the fit. 
 
 ```{r}
+s <- as.matrix(stanGlm1)
+MEDIAN <- apply(s, 2, median)
+MAD_SD <- apply(s, 2, mad)
+ss <- cbind(round(MEDIAN, 1), round(MAD_SD, 1))
+colnames(ss) <- c("MEDIAN", "MAD_SD")
+ss
 ```
 
 ### 10.8c
 Fit again, this time setting `iter` = 1000 in your `stan_glm` call. Do this a few times in order to get a sense of the simulation variability. 
 
 ```{r}
+stanGlm1 <- stan_glm(eval ~ beauty + female + beauty:female, data = beauty, iter = 1000, refresh = 0)
+stanGlm1
 ```
 
 ### 10.8d
 Repeat the previous step, setting `iter` = 100 and then `iter` = 10. 
 
 ```{r}
+stanGlm2 <- stan_glm(eval ~ beauty + female + beauty:female, data = beauty, iter = 100, refresh = 0)
+stanGlm2
+
+stanGlm3 <- stan_glm(eval ~ beauty + female + beauty:female, data = beauty, iter = 10, refresh = 0)
+stanGlm3
 ```
 
 ### 10.8e
 How many simulations were needed to give a good approximation to the mean and standard error for the coefficient of beauty? 
+
+There needs to be at least 1000 simulations to create a good approximation to the mean and standard error for the coefficient of beauty.
