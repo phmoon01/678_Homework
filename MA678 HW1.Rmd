@@ -2,7 +2,9 @@
 title: "HW 1 Solutions"
 author: "Paul Moon"
 date: "Fall 2024"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -342,8 +344,8 @@ pre$predict_sd <- apply(b, 2, sd)
 
 ggplot(pre) + 
   aes(x = mom_age) + 
-  geom_errorbar(aes(ymin = predict_mean * predict_sd, ymax = predict_mean + 2 * predict_sd), color = "blue") + 
-  geom_point(aes(y = predict_mean), color = "blue", size = 2) + 
+  geom_errorbar(aes(ymin = predict_mean - 2 * predict_sd, ymax = predict_mean + 2 * predict_sd), color = "blue", width = .1) + 
+  geom_point(aes(y = predict_mean), color = "green", size = 2) + 
   geom_point(aes(y = kid_score), color = "red", size = 2) + 
   theme_bw() + 
   labs(title = "Problem", 
@@ -357,18 +359,54 @@ The folder `Beauty` contains data (use file `beauty.csv`) from Hamermesh and Par
 See also Felton, Mitchell, and Stinson (2003) for more on this topic. 
 
 ```{r}
+beauty <- read.csv("beauty.csv", header = TRUE)
 ```
 
 ### 10.6a
 Run a regression using beauty (the variable `beauty`) to predict course evaluations (`eval`),  adjusting for various other predictors. Graph the data and fitted model, and explain the meaning of each of the coefficients along with the residual standard deviation. Plot the residuals versus fitted values. 
 
 ```{r}
+stanGlm <- stan_glm(eval ~ beauty, data = beauty, refresh = 0)
+stanGlm
+
+plot(beauty$beauty, beauty$eval, pch = 20, main = "Data and Fitted Model", 
+     xlab = "Beauty", 
+     ylab = "Evaluation")
+abline(coef(stanGlm))
+
+plot(fitted(stanGlm), resid(stanGlm), pch = 20, main = "Residuals vs Fitted Values Model", 
+     xlab = "Fitted", 
+     ylab = "Residuals")
 ```
 
 ### 10.6b
 Fit some other models, including beauty and also other predictors. Consider at least one model with interactions. For each model, explain the meaning of each of its estimated coefficients.
 
 ```{r}
+stanGlm1 <- stan_glm(eval ~ beauty + female + beauty:female, data = beauty, refresh = 0)
+stanGlm1
+
+a <- coef(stanGlm1)
+colGraph1 <- ifelse(beauty$female == 1, "blue", "red")
+plot(beauty$beauty, beauty$eval, pch = 20, main = "Evaluation of Beauty Scores on Sex", col = colGraph1,
+     xlab = "Beauty", 
+     ylab = "Evaluation")
+abline(a[1] + a[3], a[2] + a[4], col = "blue")
+abline(a[1], a[2], col = "red")
+
+stanGlm2 <- stan_glm(eval ~ beauty + minority + beauty:minority, data = beauty, refresh = 0)
+stanGlm2
+
+b <- coef(stanGlm2)
+colGraph2 <- ifelse(beauty$minority == 1, "blue", "red")
+plot(beauty$beauty, beauty$eval, pch = 20, main = "Evaluation of Beauty Scores on Minority", col = colGraph2, 
+     xlab = "Beauty", 
+     ylab = "Evaluation")
+abline(b[1] + b[3], b[2] + b[4], col = "blue")
+abline(b[1], b[2], col = "red")
+
+cat("\n Males have an average beauty evaluation of 4.1 while females have an average beauty evaluation of 3.9. The slope of 0.2 for males means that for every 1 point of beauty score means a evaluation of 0.2 more. However; for females that slope is brought down to 0.1")
+cat("\n Non-minorites have an average beauty evaluation of 4.0 while minorities have an average evaluation of 3.9. The slope of 0.1 for non- minorities means that for every 1 point of beauty score means a evaluation of 0.1 more. However; for minorities that slope is brough down to -0.1")
 ```
 
 ## 10.7 Predictive simulation for linear regression:
@@ -378,12 +416,36 @@ Take one of the models from the previous exercise.
 Instructor A is a 50-year-old woman who is a native English speaker and has a beauty score of -1. Instructor B is a 60-year-old man who is a native English speaker and has a beauty score of -0.5. Simulate 1000 random draws of the course evaluation rating of these two instructors. In your simulation, use `posterior_predict` to account for the uncertainty in the regression parameters as well as predictive uncertainty. 
 
 ```{r}
+#We use stanGlm1 since one instructor is male and another one is female.
+
+IA <- data.frame(beauty = -1, female = 1, age = 50, minority = 0, nonenglish = 0)
+IB <- data.frame(beauty = -0.5, female = 0, age = 60, minority = 0, nonenglish = 0)
+
+SA <- posterior_predict(stanGlm1, newdata = IA, draws = 1000)
+SB <- posterior_predict(stanGlm1, newdata = IB, draws = 1000)
+
+ggplot() + 
+  geom_histogram(aes(SA[, 1]), fill = "blue", alpha = 0.3) + 
+  geom_histogram(aes(SB[, 1]), fill = "red", alpha = 0.3) + 
+  labs(title = "Instructor Simulation", 
+       x = "Evaluations", 
+       y = "Frequency")
 ```
 
 ### 10.7b
 Make a histogram of the difference between the course evaluations for A and B. What is the probability that A will have a higher evaluation? 
 
 ```{r}
+pA <- c(apply(SA, 2, mean), apply(SA, 2, sd))
+pB <- c(apply(SB, 2, mean), apply(SB, 2, sd))
+
+pC <- c(pA[1] - pB[1], sqrt(pA[2] ^ 2 + pB[2] ^ 2))
+1 - pnorm(0, pC[1], pC[2])
+
+a <- sample(SA, 10000, replace = TRUE)
+b <- sample(SB, 10000, replace = TRUE)
+
+mean(a > b)
 ```
 
 ## 10.8 How many simulation draws: 
