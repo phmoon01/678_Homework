@@ -1,7 +1,7 @@
 ---
 title: "HW 1 Solutions"
-author: "My Name"
-date: "Fall 2022"
+author: "Paul Moon"
+date: "Fall 2024"
 output: pdf_document
 ---
 
@@ -19,14 +19,16 @@ Simulate 100 data points from the linear model, $y =  a + bx$ + error, with $a =
 Fit a regression line to these data and display the output. 
 
 ```{r}
+#set.seed(100)
 a <- 5
 b <- 7
 n <- 100
 x <- runif(n, min = 0, max = 50)
 error <- rnorm(n, mean = 0, sd = 3)
-
 y <- a + b*x + error
-lm_model <- lm(y ~ x)
+
+data = data.frame(x, y)
+lm_model <- stan_glm(y ~ x, data = data, refresh = 0)
 summary(lm_model)
 ```
 
@@ -47,8 +49,10 @@ ggplot(data = data.frame(x, y), aes(x, y)) +
 Use the `text` function in R to add the formula of the fitted line to the graph. 
 
 ```{r}
-plot.new()
-text(x = 10, y = 50, label = paste("y = ", round(coef(lm_model)[1], 2), " + ", round(coef(lm_model)[2], 2), "x"), pos = 4)
+label = paste("y = ", round(coef(lm_model)[1], 1), " + ", round(coef(lm_model)[2], 1), "x", sep = "")
+plot(x, y, pch = 20,main = "Scattorplot with Regression Line with Equation")
+abline(coef(lm_model))
+text(40,100,label)
 ```
 
 ## 7.3 Fake-data simulation and fitting the wrong model: 
@@ -59,9 +63,9 @@ Simulate 100 data points from the model $y = a + b x + c x^2$ + error, with the 
 Fit a regression line `stan_glm(y ~ x)` to these data and display the output. 
 
 ```{r}
-a <- 6.4567
-b <- 1.2389
-c <- 3.9563
+a <- 6
+b <- 1
+c <- 3
 x <- runif(100, min = 0, max = 50)
 y <- rep(0, 100)
 error <- rnorm(100, mean = 0, sd = 3)
@@ -70,16 +74,24 @@ for(i in 1:100){
   y[i] = a + b * x[i] + c * x[i]^2 + error[i]
 }
 
-stan <- glm(y ~ x)
-stan
+data = data.frame(x = x, y = y)
+stanGlm <- stan_glm(y ~ x, data = data, refresh = 0)
+stanGlm
 ```
 
 ### 7.3b
 Graph a scatterplot of the data and the regression line. This is the best-fit linear regression.  What does “best-fit” mean in this context?
 
 ```{r}
-plot(x, y)
-abline(stan, col = "blue")
+ggplot(data = data.frame(x, y), aes(x, y)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE) + 
+  labs(title = "Best-Fit Linear Regression Model",
+       x = "x",
+       y = "y") + 
+  theme_minimal()
+
+#The best-fit would mean the linear regression with the lowest MSE in the data set.
 ```
 
 
@@ -87,18 +99,35 @@ abline(stan, col = "blue")
 Take the election forecasting model and simplify it by creating a binary predictor defined as $x = 0$ if income growth is less than 2% and $x = 1$ if income growth is more than 2%.
 
 ```{r}
+hibbs <- read.table("https://raw.githubusercontent.com/avehtari/ROS-Examples/master/ElectionsEconomy/data/hibbs.dat", header=TRUE)
+
+hibbs$x <- ifelse(hibbs$growth >= 2,1,0)
+hibbs
 ```
 
 ### 7.6a
 Compute the difference in incumbent party's vote share on average, comparing those two  groups of elections, and determine the standard error for this difference.
 
 ```{r}
+x0 <- hibbs[hibbs$x == 1,]$vote
+x1 <- hibbs[hibbs$x == 0,]$vote
+
+avgDiff <- mean(x0) - mean(x1)
+avgDiff
+
+c0 <- length(x0)
+c1 <- length(x1)
+StdDev <- (sqrt((var(x0) * (c0 - 1) + var(x1) * (c1 - 1)) / (c0 + c1 - 2)))
+StdErr <- StdDev * sqrt(1 / c0 + 1 / c1)
+StdErr
 ```
 
 ### 7.6b
 Regress incumbent party's vote share on the binary predictor of income growth and check  that the resulting estimate and standard error are the same as above. 
 
 ```{r}
+lm_model <- lm(vote ~ x, data = hibbs)
+summary(lm_model)
 ```
 
 ## 8.8 Comparing lm and stan_glm: 
@@ -113,36 +142,40 @@ x <- runif(n, min = 0, max = 20)
 error <- rnorm(n, mean = 0, sd = 5)
 y <- 2 + 3 * x + error
 
-lm_model <- lm(y ~ x)
-stan_glm_model <- stan_glm(y ~ x, data = data.frame(x = x, y = y))
-coef(lm_model)
-coef(stan_glm_model)
-summary(lm_model)
-summary(stan_glm_model)
+data = data.frame(x, y)
+plot(x, y, pch = 20, main = "Simulation Data")
+
+lm_model <- lm(y ~ x , data = data)
+stanGlm <- stan_glm(y ~ x, data = data, refresh = 0)
+lm_model
+stanGlm
 ```
 
 ### 8.8b
 Plot the simulated data and the two fitted regression lines. 
 
 ```{r}
-plot(x, y)
-abline(fit_lm, col = "red")
-lines(x, predict(fit_stan_glm, newdata = data.frame(x = sort(x))), col = "blue")
+plot(x, y, pch = 20, main = "Simulated Data with Regression Lines")
+abline(coef(lm_model), col = "blue")
+abline(coef(stanGlm), col = "red")
 ```
 
 ### 8.8c
 Repeat the two steps above, but try to create conditions for your simulation so that `lm` and `stan_glm` give much different results. 
 
 ```{r}
+n <- 10
+x <- runif(n, min = 0, max = 20)
 error <- rnorm(n, mean = 0, sd = 10)
 y <- 2 + 3 * x + error
-lm_model <- lm(y ~ x)
-stan_glm_model <- stan_glm(y ~ x, data = data.frame(x = x, y = y))
 
-coef(lm_model)
-coef(stan_glm_model)
-summary(lm_model)
-summary(stan_glm_model)
+data = data.frame(x, y)
+
+lm_model <- lm(x ~ y, data = data)
+stanGlm <- stan_glm(y ~ x, data = data, refresh = 0)
+plot(x, y, pch = 20, main = "Simulated Data with Regression Lines")
+abline(coef(lm_model), col = "blue")
+abline(coef(stanGlm), col = "red")
 ```
 
 ## 10.1 Regression with interactions: 
@@ -152,18 +185,44 @@ Simulate 100 data points from the model, $y = b_0 + b_1 x +  b_2 z + b_3 x z$ + 
 Display your simulated data as a graph of $y$ vs $x$, using dots and circles for the points with $z$ = 0 and 1, respectively. 
 
 ```{r}
+b <- c(1, 2, -1, -2)
+error = rnorm(100, mean = 0, sd = 3)
+z <- rbinom(100, size = 1, prob = 0.5)
+x <- rnorm(100, mean = z, sd = 1)
+
+y = b[1] + b[2] * x + b[3] * z + b[4] * x * z + error
+
+shape = ifelse(z == 1, 1, 20)
+plot(x, y, pch = shape, main = "Simulated Data")
 ```
 
 ### 10.1b
 Fit a regression predicting $y$ from $x$ and $z$ with no interaction. Make a graph with the data and two parallel lines showing the fitted model. 
 
 ```{r}
+data = data.frame(y = y, x = x, z = z)
+stanGlm <- stan_glm(y ~ z + x, data = data, refresh = 0)
+stanGlm
+
+stan <- coef(stanGlm)
+
+plot(x, y, pch = shape, main = "No Interaction Model")
+abline(stan[1] + stan[2], stan[3], col = "blue")
+abline(stan[1], stan[3], col = "red")
 ```
 
 ### 10.1c
 Fit a regression predicting $y$ from $x$, $z$, and their interaction. Make a graph with the data and two lines showing the fitted model. 
 
 ```{r}
+stanGlm <- stan_glm(y ~ z + x + z : x,data = data, refresh = 0)
+stanGlm
+
+stan <- coef(stanGlm)
+
+plot(x, y, pch = shape, main = "Interaction Model")
+abline(stan[1] + stan[2], stan[3] + stan[4], col="blue")
+abline(stan[1], stan[3], col="red")
 ```
 
 
@@ -186,42 +245,110 @@ sigma 0.4    0.0
 Write the equation of the estimated regression line of $y$ on $x$ for the treatment group and the control group, and the equation of the estimated regression line of $y$ on $x$ for the control group. 
 
 ```{r}
+data = data.frame(Median = c(1.2, 1.6, 2.7, 0.7), MAD_SD = c(0.2, 0.4, 0.3, 0.5))
+row.names(data) = c("(Intercept)","x","z","x:z")
+data
+
+med_int <- data[c("(Intercept)"), c("Median")]
+med_x <- data[c("x"), c("Median")]
+med_z <- data[c("z"), c("Median")]
+med_xz <- data[c("x:z"), c("Median")]
+cat("The equation for the treatment group is: y(treatment) =", med_int + med_z, "+", med_x + med_xz, "x\n")
+cat("The equation for the treatment group is:  y(control)  =", med_int, "+", med_x, "x")
 ```
 
 ### 10.2b
 Graph with pen on paper the two regression lines, assuming the values of $x$ fall in the range $(0, 10)$. On this graph also include a scatterplot of data (using open circles for treated units and dots for controls) that are consistent with the fitted model. 
 
 ```{r}
+a <- data$Median
+x = runif(100, min = 0, max = 10)
+z = rbinom(100, size = 1, prob = 0.5)
+error = rnorm(100, mean = 0, sd = 0.5)
+
+y = ifelse(z==0, a[1] + a[2] * x + error, a[1] + a[3] + (a[2] + a[4]) * x + error)
+
+shape = ifelse(z==0, 20, 1)
+plot(x, y, pch = shape, main = "Pen on Paper Graph")
+abline(a[1], a[2], col="blue")
+abline(a[1] + a[3], a[2] + a[4], col="red")
 ```
 
 ## 10.5 Regression modeling and prediction: 
 The folder `KidIQ` contains a subset of the children and mother data discussed earlier in the chapter. You have access to children's test scores at age 3,  mother's education, and the mother's age at the time she gave birth for a sample of 400 children. 
 
 ```{r}
+kidiq <- read.csv("kidiq.csv", header = TRUE)
 ```
 
 ### 10.5a
 Fit a regression of child test scores on mother's age, display the data and fitted model, check assumptions, and interpret the slope coefficient. Based on this analysis, when do you recommend mothers should give birth? What are you assuming in making this recommendation? 
 
 ```{r}
+stanGlm <- stan_glm(kid_score ~ mom_age, data = kidiq, refresh = 0)
+stanGlm
+
+plot(kidiq$mom_age, kidiq$kid_score, pch = 20, main = "Kid Test Scores on Mom's Age",
+     xlab = "Mom's Age",
+     ylab = "Kid's IQ Score")
+abline(coef(stanGlm))
 ```
 
 ### 10.5b
 Repeat this for a regression that further includes mother's education, interpreting both slope coefficients in this model. Have your conclusions about the timing of birth changed? 
 
 ```{r}
+stanGlm <- stan_glm(kid_score ~ mom_age + mom_hs, data = kidiq, refresh = 0)
+stanGlm
+
+a <- coef(stanGlm)
+
+colors = ifelse(kidiq$mom_hs == 1, "blue", "red")
+plot(kidiq$mom_age, kidiq$kid_score, col = colors, pch = 20, main = "Kid Test Scores on Mom's Education",
+     xlab = "Mom's Age",
+     ylab = "Kid's IQ Score")
+abline(a[1] + a[3], a[2], col = "green")
+abline(a[1], a[2], col = "orange")
 ```
 
 ### 10.5c
 Now create an indicator variable reflecting whether the mother has completed high school or not. Consider interactions between high school completion and mother's age. Also create a plot that shows the separate regression lines for each high school completion status group. 
 
 ```{r}
+stanGlm <- stan_glm(kid_score ~ mom_age + mom_hs + mom_age:mom_hs, data = kidiq, refresh = 0)
+
+a <- coef(stanGlm)
+
+plot(kidiq$mom_age, kidiq$kid_score, col = colors, pch=20, main = "Kid Test Scores on Mom's Education",
+     xlab="Mom's Age (standardized)", 
+     ylab="Kid Score")
+abline(a[1] + a[3], a[2] + a[4],col="green")
+abline(a[1], a[2],col="orange")
 ```
 
 ### 10.5d
 Finally, fit a regression of child test scores on mother's age and education level for the first 200 children and use this model to predict test scores for the next 200. Graphically display comparisons of the predicted and actual scores for the final 200 children. 
 
 ```{r}
+obs = kidiq[1:200, ]
+pre = kidiq[201:400, ]
+stanGlm <- stan_glm(kid_score ~ mom_age + mom_hs + mom_age:mom_hs, data = obs, refresh = 0)
+stanGlm
+
+b <- posterior_predict(stanGlm, pre)
+
+pre$predict_mean <- apply(b, 2, mean)
+pre$predict_sd <- apply(b, 2, sd)
+
+ggplot(pre) + 
+  aes(x = mom_age) + 
+  geom_errorbar(aes(ymin = predict_mean * predict_sd, ymax = predict_mean + 2 * predict_sd), color = "blue") + 
+  geom_point(aes(y = predict_mean), color = "blue", size = 2) + 
+  geom_point(aes(y = kid_score), color = "red", size = 2) + 
+  theme_bw() + 
+  labs(title = "Problem", 
+       x = "Mom's Age", 
+       y = "Predict Mean")
 ```
 
 ## 10.6 Regression models with interactions: 
