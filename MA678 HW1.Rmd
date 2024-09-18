@@ -21,7 +21,6 @@ Simulate 100 data points from the linear model, $y =  a + bx$ + error, with $a =
 Fit a regression line to these data and display the output. 
 
 ```{r}
-#set.seed(100)
 a <- 5
 b <- 7
 n <- 100
