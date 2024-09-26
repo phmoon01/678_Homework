@@ -99,11 +99,20 @@ $$\log(\text{weight})=-3.8+2.1 \log(\text{height})+\text{error,} $$
 with errors that have standard deviation 0.25. Weights are in pounds and heights are in inches.
 
 ### (a) 
-Fill in the blanks: Approximately 68% of the people will have weights within a factor of ______ and ______ of their predicted values from the regression.
+Fill in the blanks: Approximately 68% of the people will have weights within a factor of 1.284 and 0.25 of their predicted values from the regression.
 
 ### (b) 
 Using pen and paper, sketch the regression line and scatterplot of log(weight) versus log(height) that make sense and are consistent with the fitted model. Be sure to label the axes of your graph.
 
+```{r}
+height = rnorm(n = 1000, mean = 65, sd = 7)
+# Looked up average height in a male 171 and female 159 and averaged it expected a 50/50 population. Also standard deviation was a little under 3 inches, thus giving the standard deviation of 7 cm.
+weight = exp(-3.8 + 2.1 * log(height) + rnorm(n = 1000, mean = 0, sd = 0.25)) #used given values
+globals = data.frame(weight = weight, height = height)
+ggplot(globals, aes(x = log(height), y = log(weight))) + 
+  geom_point() + 
+  geom_smooth(formula = 'y~x', method = "lm") #plot and labeled axis
+```
 
 ## 12.6 
 *Logarithmic transformations*: The folder `Pollution` contains mortality rates and various environmental factors from 60 US metropolitan areas. For this exercise we shall model mortality rate given nitric oxides, sulfur dioxide, and hydrocarbons as inputs. this model is an extreme oversimplication, as it combines all sources of mortality and does not adjust for crucial factors such as age and smoking. We use it to illustrate log transformation in regression.  
@@ -198,7 +207,14 @@ ggplot() +
 Compare models for earnings and for log(earnings) given height and sex as shown in page 84 and 192. Use `earnk` and `log(earnk)` as outcomes.
 
 ```{r}
+Earnings <- read.csv("earnings.csv")
 
+regEarnK = stan_glm(earnk ~ height + male, data = earnings, refresh = 0)
+logEarnK = stan_glm(log(1 + earnk) ~ height + male, data = earnings, 
+                    refresh = 0)
+
+regEarnK
+logEarnK
 ```
 
 ### (b) 
@@ -273,6 +289,14 @@ Since we are dealing with a log function, for every 1% increase we have in cigar
 
 ```{r}
 Beauty <- read.csv("beauty.csv", header = TRUE)
+beauty= beauty %>% mutate(female=factor(female),
+minority=factor(minority),
+nonenglish=factor(nonenglish))
+beauty %>% select (eval, beauty, female, age) %>%
+ggpairs(upper = list(continuous = wrap("cor", method = "kendall", size=2)),
+lower = list(continuous = wrap("smooth", alpha = 0.3)),
+diag = list(continuous = wrap("barDiag"), binwidth = 1),
+mapping = aes(color = female))
 ```
 
 
