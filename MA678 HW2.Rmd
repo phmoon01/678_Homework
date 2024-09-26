@@ -1,35 +1,65 @@
 ---
 title: "MA678 Homework 2"
-date: "9/20/2022"
+date: "9/26/2024"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(rstanarm)
 ```
 
 ## 11.5 
 *Residuals and predictions*: The folder `Pyth` contains outcome $y$ and predictors $x_1$, $x_2$ for 40 data points, with a further 20 points with the predictors but no observed outcome. Save the file to your working directory, then read it into R using `read.table()`.
 
+```{r}
+pythData <- "https://raw.githubusercontent.com/avehtari/ROS-Examples/refs/heads/master/"
+Pyth <- read.table(paste0(pythData, "Pyth/pyth.txt"), header = TRUE)
+#pulling out data from dataset
+```
+
 ### (a) 
 Use R to fit a linear regression model predicting $y$ from $x_1$, $x_2$, using the first 40 data points in the file. Summarize the inferences and check the fit of your model.
 
 ```{r}
-
+LM = lm(y ~ x1 + x2, data = Pyth, subset = 1:40)
+stanGlm = stan_glm(y ~ x1 + x2, data = Pyth, subset = 1:40, refresh = 0)
+summary(stanGlm) #summarize the inferences
+pp_check(stanGlm) #check the fit of your model
 ```
 
 ### (b) 
 Display the estimated model graphically as in Figure 10.2
 
 ```{r}
-
+par(mfrow=c(1, 2)) #combines graphs into one screen
+plot(Pyth[1:40, ]$x1, Pyth[1:40, ]$y, 
+     xlab = "x1", 
+     ylab = "y") #plots and labeled axis
+curve(coef(LM)[1] + coef(LM)[2] * x + coef(LM)[3] * mean(Pyth[1:40, ]$x2),
+      add = TRUE) #regression line
+plot(Pyth[1:40, ]$x2, Pyth[1:40, ]$y, 
+     xlab = "x2", 
+     ylab = "y") #plots and labeled axis
+curve(coef(LM)[1] + coef(LM)[2] * mean(Pyth[1:40, ]$x1) + coef(LM)[3] * x,
+      add = TRUE) #regression line
 ```
 
 ### (c) 
 Make a residual plot for this model. Do the assumptions appear to be met?
 
 ```{r}
+predicted <- predict(stanGlm) #predicted stanGlm
+residual <- Pyth$y[1:40] - predicted #residual equation
+par(mar = c(3,3,2,1), mgp = c(2, 1, 0)) #gives area to label axis
+plot(predicted, residual,
+     xlab = "Predicted", 
+     ylab = "Residuals", 
+     main = "Residuals vs Predicted") #plot and labeled axis
+abline(h = 0) #regression line at y = 0 to see if error assumptions are met
 
+# From the scatterplot, the assumption appears to not be met
 ```
 
 
@@ -37,7 +67,28 @@ Make a residual plot for this model. Do the assumptions appear to be met?
 Make predictions for the remaining 20 data points in the file. How confident do you feel about these predictions?
 
 ```{r}
+p = posterior_predict(stanGlm, newdata = Pyth[41:60, 2:3])
+# looking at remaining values with newdata
+p_upper = apply(p, MARGIN = 2, FUN = quantile, probs = 0.95)
+# 95% probability 
+p_lower = apply(p, MARGIN = 2, FUN = quantile, probs = 0.05)
+# 1 - 95% probability
+p_mean = apply(p, MARGIN = 2, FUN = mean)
+# setting mean prediction
+pre = data.frame(upper = p_upper, lower = p_lower, 
+                 point_estimate = p_mean, 
+                 index = 41:60)
+# data frame setup
+ggplot(pre) + 
+  geom_point(aes(x = index, y = point_estimate)) + 
+  geom_segment(aes(x = index, xend = index, 
+                   y = upper, yend = lower)) + 
+  labs(x = "Index", 
+       y = "95% Prediction Intervals",
+       title = "Prediction for Final 20 Data Points")
+# plot and labeled axis
 
+# Based on the 95% prediction intervals. There seems to be high confidence in the predictions.
 ```
 
 
@@ -56,11 +107,20 @@ Using pen and paper, sketch the regression line and scatterplot of log(weight) v
 ## 12.6 
 *Logarithmic transformations*: The folder `Pollution` contains mortality rates and various environmental factors from 60 US metropolitan areas. For this exercise we shall model mortality rate given nitric oxides, sulfur dioxide, and hydrocarbons as inputs. this model is an extreme oversimplication, as it combines all sources of mortality and does not adjust for crucial factors such as age and smoking. We use it to illustrate log transformation in regression.  
 
+```{r}
+pollutionData <- "https://raw.githubusercontent.com/avehtari/ROS-Examples/master/"
+Pollution <- read.csv(paste0(pollutionData, 
+                             "Pollution/data/pollution.csv"), header=TRUE)
+```
+
 ### (a) 
 Create a scatterplot of mortality rate versus level of nitric oxides. Do you think linear regression will fit these data well? Fit the regression and evaluate a residual plot from the regression.
 
 ```{r}
-
+ggplot(data = Pollution)+
+geom_point(aes(x=nox,y = mort))
+fit_12.6a=lm(mort~nox, data = Pollution)
+summary(fit_12.6a)
 ```
 
 ### (b) 
