@@ -177,7 +177,7 @@ cat("The coefficients: \n
 intercept - when all other values are 1 (since we are dealing with a logarithmic model) our average expected value is 924.965 in mortality \n
 log(nox) - for every 1 increase in log(nitric oxides), on average there is a 58.336 increase in mortality \n
 log(so2) - for every 1 increase in log(sulfur dioxide), on average there is a 11.762 increase in mortality \n
-log(hc) - for every 1 increase in log(hydrocarbons), on average there is a 57.3 decrease in mortality")
+log(hc) - for every 1 increase in log(hydrocarbons), on average there is a 57.3 decrease in mortality") #written discription
 ```
 
 ### (e) 
@@ -208,10 +208,14 @@ Compare models for earnings and for log(earnings) given height and sex as shown 
 
 ```{r}
 Earnings <- read.csv("earnings.csv")
+Earnings$log_earnk <- log(Earnings$earnk)
 
-regEarnK = stan_glm(earnk ~ height + male, data = earnings, refresh = 0)
-logEarnK = stan_glm(log(1 + earnk) ~ height + male, data = earnings, 
-                    refresh = 0)
+earnings <- na.omit(Earnings) #getting rid of NA
+earnings <- earnings[!is.infinite(earnings$log_earnk),]
+
+regEarnK <- stan_glm(earnk ~ height + male, data = earnings, refresh = 0)
+logEarnK <- stan_glm(log_earnk ~ height + male, data = earnings, refresh = 0)
+#Reporting these Bayesian regression into models
 
 regEarnK
 logEarnK
@@ -220,6 +224,7 @@ logEarnK
 ### (b) 
 Compare models from other exercises in this chapter.
 
+Comparing the models from other exercises, for the log(earnK), it seems as if it is similar to the other models in a sense that they are very centered and stable due to the very low standard deviation (the normal distribution). Even for the regular earnK model, we can see that the standard deviation is also really low resulting in similar results as it's log counterpart. 
 
 ## 12.8 
 *Log-log transformations*: Suppose that, for a certain population of animals, we can predict log weight from log height as follows:  
@@ -289,14 +294,29 @@ Since we are dealing with a log function, for every 1% increase we have in cigar
 
 ```{r}
 Beauty <- read.csv("beauty.csv", header = TRUE)
-beauty= beauty %>% mutate(female=factor(female),
-minority=factor(minority),
-nonenglish=factor(nonenglish))
-beauty %>% select (eval, beauty, female, age) %>%
-ggpairs(upper = list(continuous = wrap("cor", method = "kendall", size=2)),
-lower = list(continuous = wrap("smooth", alpha = 0.3)),
-diag = list(continuous = wrap("barDiag"), binwidth = 1),
-mapping = aes(color = female))
+
+beauty1 <- stan_glm(eval ~ beauty, data = Beauty, refresh = 0)
+Beauty$prediction1 = predict(beauty1, newdata = Beauty)
+Beauty$minority <- as.factor(Beauty$minority)
+beauty2 <- stan_glm(eval ~ beauty + minority, data = Beauty, refresh = 0)
+Beauty$prediction2 = predict(beauty2, newdata = Beauty)
+beauty3 <- stan_glm(eval ~ beauty + minority + beauty * minority, data = Beauty, refresh = 0)
+Beauty$prediction3 = predict(beauty3, newdata = Beauty)
+# Set up all the new columns as predictions1-3
+
+mean_eval <- mean(Beauty$eval)
+mean1 <- mean(Beauty$prediction1) - mean_eval
+mean2 <- mean(Beauty$prediction2) - mean_eval
+mean3 <- mean(Beauty$prediction3) - mean_eval
+# Used the predictions to find the difference in means from the actual mean of the evaluation
+
+mean1
+mean2
+mean3
+
+summary(beauty1)
+summary(beauty2)
+summary(beauty3)
 ```
 
 
@@ -304,22 +324,22 @@ mapping = aes(color = female))
 Prediction from a fitted regression: Consider one of the fitted models for mesquite leaves, for example `fit_4`, in Section 12.6. Suppose you wish to use this model to make inferences about the average mesquite yield in a new set of trees whose predictors are in data frame called  new_trees. Give R code to obtain an estimate and standard error for this population average. You do not need to make the prediction; just give the code. 
 
 ```{r}
-mesquiteData <- "https://raw.githubusercontent.com/avehtari/ROS-Examples/refs/heads/master/"
-mesquite <- read.table(paste0(mesquiteData, "Mesquite/data/mesquite.dat"), header = TRUE)
- mesquite$cvolume <- mesquite$diam1 * mesquite$diam2 * mesquite$canopy_height
- mesquite$carea <- mesquite$diam1 * mesquite$diam2
- mesquite$cshape <- mesquite$diam1 / mesquite$diam2
- # The new columns that was created into the mesquite data
-
- fit_4 <- stan_glm(formula = log(weight) ~ log(cvolume) + 
-                     log(carea) + log(cshape) + 
-                     log(total_height) + log(density) + group, 
-                   data = mesquite, refresh = 0) #set the fitted models into fit_4
- p = posterior_predict(fit_4, newdata = new_trees, fun = exp)
- # Code will NOT run because we do not have the new_trees data frame just making an inference
- pavg = apply(p, MARGIN = 2, FUN = mean)
- popavg = mean(pavg) #computed population average
- popmsd = sd(pmean) #computed standard error
- 
- # This is the code when the new_trees data.frame would have loaded
+# mesquiteData <- "https://raw.githubusercontent.com/avehtari/ROS-Examples/refs/heads/master/"
+# mesquite <- read.table(paste0(mesquiteData, "Mesquite/data/mesquite.dat"), header = TRUE)
+#  mesquite$cvolume <- mesquite$diam1 * mesquite$diam2 * mesquite$canopy_height
+#  mesquite$carea <- mesquite$diam1 * mesquite$diam2
+#  mesquite$cshape <- mesquite$diam1 / mesquite$diam2
+#  # The new columns that was created into the mesquite data
+# 
+#  fit_4 <- stan_glm(formula = log(weight) ~ log(cvolume) +
+#                      log(carea) + log(cshape) +
+#                      log(total_height) + log(density) + group,
+#                    data = mesquite, refresh = 0) #set the fitted models into fit_4
+#  p = posterior_predict(fit_4, newdata = new_trees, fun = exp)
+#  # Code will NOT run because we do not have the new_trees data frame just making an inference
+#  pavg = apply(p, MARGIN = 2, FUN = mean)
+#  popavg = mean(pavg) #computed population average
+#  popmsd = sd(pmean) #computed standard error
+# 
+#  # This is the code when the new_trees data.frame would have loaded
 ```
