@@ -15,18 +15,6 @@ library(data.table)
 library(arm)
 ```
 
-## Disclaimer (remove after you've read)!
-
-A few things to keep in mind :  
-1) Use `set.seed()` to make sure that the document produces the same random simulation as when you ran the code.  
-2) Use `refresh=0` for any `stan_glm()` or stan-based model. `lm()` or non-stan models don't need this!  
-3) You can type outside of the R chunks and make new R chunks where it's convenient. Make sure it's clear which questions you're answering.  
-4) Even if you're not too confident, please try giving an answer to the text responses!  
-5) Please don't print data in the document unless the question asks. It's good for you to do it to look at the data, but not as good for someone trying to read the document later on.  
-6) Check your document before submitting! Please put your name where "Your Name" is by the author!
-
-
-
 ## 13.5 Interpreting logistic regression coefficients
 Here is a fitted model from the Bangladesh analysis predicting whether a person with high-arsenic drinking water will switch wells, given the  arsenic level in their existing well and the distance to the nearest safe well:  
 
