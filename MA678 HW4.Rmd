@@ -12,6 +12,7 @@ library(ggplot2)
 library(rstanarm)
 library(dplyr)
 library(data.table)
+library(arm)
 ```
 
 ## Disclaimer (remove after you've read)!
@@ -43,7 +44,7 @@ Compare two people who live the same distance from the nearest well but whose ar
 Use the divide-by-4 rule, based on the information from this regression output. 
 
 ```{r}
-#Looking at arsenic levels. Thus, using the divide-by-4 rule, we get β/4 = 0.46/4 = 0.115
+#Looking at arsenic levels. Thus, using the divide-by-4 rule, we get B/4 = 0.46/4 = 0.115
 
 db4r <- 0.46/4
 est1 <- db4r * (1 - 0.5)
