@@ -48,15 +48,15 @@ Use the divide-by-4 rule, based on the information from this regression output.
 db4r <- 0.46/4
 est1 <- db4r * (1 - 0.5)
 mse1 <- sqrt(0.04 ^ 2 / (4 ^ 2))
-cat("The approximate estimate is:", est)
-cat("\nThe standard error is:", mse)
+cat("The approximate estimate is:", est1)
+cat("\nThe standard error is:", mse1)
 
 #Find the confidence interval by getting our estimate ± standard deviation * standard error
 cat("\nThe 50% interval range is: (",
-    c(est - 0.67 * mse, ",", est + 0.67 * mse),
+    c(est1 - 0.67 * mse1, ",", est1 + 0.67 * mse1),
     ")")
 cat("\nThe 95% interval range is: (",
-    c(est - 1.96 * mse, ",", est + 1.96 * mse),
+    c(est1 - 1.96 * mse1, ",", est1 + 1.96 * mse1),
     ")")
 ```
 
@@ -266,7 +266,15 @@ summary(model7)
 Make graphs as in Figure 14.3 to show the relation between probability of switching, distance, and arsenic level.
 
 ```{r}
-
+plot(c(0, max(wells$arsenic, na.rm = TRUE) * 1.02), c(0, 1), 
+     xlab = "Arsenic", 
+     ylab = "Probability of Switch",
+     xaxs = "i", yaxs = "i")
+points(wells$arsenic, wells$switch)
+curve(invlogit(coef(model7)[1] + coef(model7)[2] * 0 + 
+        coef(model7)[1] + coef(model7)[3] * log(x) + coef(model7)[4] * 0), add = TRUE)
+curve(invlogit(coef(model7)[1] + coef(model7)[2] * .5 + 
+coef(model7)[3] * log(x) + coef(model7)[4] * 0.5 * log(x)), add=TRUE)
 ```
 
 
@@ -281,5 +289,17 @@ iv. A comparison of `arsenic` = 1.0 to `arsenic` = 2.0, with `dist` held constan
 Discuss these results. 
 
 ```{r}
+sfn <- function(dist, arsenic){
+  y = invlogit(coef(model7)[1] + coef(model7)[2] * dist / 100 + 
+                 coef(model7)[3] * log(arsenic) + coef(model7)[4] * (dist / 100) * 
+                 log(arsenic))
+  return(y)
+}
 
+apd1<-mean(sfn(100,wells$arsenic) - sfn(0, wells$arsenic))
+apd2<-mean(sfn(200,wells$arsenic) - sfn(100, wells$arsenic))
+apd3<-mean(sfn(wells$dist, 1) - sfn(wells$dist, 0.5))
+apd4<-mean(sfn(wells$dist, 2) - sfn(wells$dist, 1))
+
+paste(apd1, apd2, apd3, apd4)
 ```
