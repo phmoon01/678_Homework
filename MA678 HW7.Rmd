@@ -1,7 +1,7 @@
 ---
 title: "MA678 Homework 7"
-author: "Your Name"
-date: "November 26, 2020"
+author: "Paul Moon"
+date: "November 14, 2024"
 output:
   pdf_document: default
   html_document: default
